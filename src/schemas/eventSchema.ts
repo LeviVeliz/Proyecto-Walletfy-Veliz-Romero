@@ -1,0 +1,27 @@
+import { z } from 'zod';
+
+export const eventSchema = z.object({
+  id: z.string().min(1, 'ID es requerido'),
+  nombre: z.string()
+    .min(1, 'Nombre es requerido')
+    .max(20, 'Nombre debe tener máximo 20 caracteres'),
+  descripcion: z.string()
+    .max(100, 'Descripción debe tener máximo 100 caracteres')
+    .optional()
+    .or(z.literal('')),
+  cantidad: z.number()
+    .positive('La cantidad debe ser un número positivo')
+    .refine((val) => val > 0, 'La cantidad debe ser mayor a 0'),
+  fecha: z.string()
+    .min(1, 'Fecha es requerida')
+    .refine((date) => {
+      return !isNaN(Date.parse(date));
+    }, 'Fecha debe ser válida'),
+  tipo: z.enum(['ingreso', 'egreso'], {
+    required_error: 'Tipo es requerido',
+    invalid_type_error: 'Tipo debe ser ingreso o egreso'
+  }),
+  adjunto: z.string().optional()
+});
+
+export type EventFormData = z.infer<typeof eventSchema>;
