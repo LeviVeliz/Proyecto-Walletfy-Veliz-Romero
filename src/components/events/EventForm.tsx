@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch } from '../../hooks';
 import { addEvent, updateEvent, saveEvents } from '../../store/slices/eventsSlice';
-import { eventSchema, EventFormData } from '../../schemas/eventSchema';
+import { eventSchema } from '../../schemas/eventSchema';
 import { WalletEvent, EventType } from '../../types';
 import { Input } from '../ui/Input';
 import { TextArea } from '../ui/TextArea';
@@ -12,8 +12,19 @@ import { Container } from '../ui/Container';
 import { Save, ArrowLeft, Upload, X } from 'lucide-react';
 import { z } from 'zod';
 
+
+interface EventFormState {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  cantidad: string; 
+  fecha: string;
+  tipo: EventType;
+  adjunto: string;
+}
+
 interface EventFormProps {
-  editingEvent?: WalletEvent;
+  editingEvent?: WalletEvent | undefined;
   onCancel: () => void;
   events: WalletEvent[];
 }
@@ -25,38 +36,46 @@ export const EventForm: React.FC<EventFormProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   
-  const [formData, setFormData] = useState<EventFormData>({
-    id: editingEvent?.id || '',
-    nombre: editingEvent?.nombre || '',
-    descripcion: editingEvent?.descripcion || '',
-    cantidad: editingEvent?.cantidad || 0,
-    fecha: editingEvent?.fecha || new Date().toISOString().split('T')[0],
-    tipo: editingEvent?.tipo || 'ingreso',
-    adjunto: editingEvent?.adjunto || '',
+  const [formData, setFormData] = useState<EventFormState>({
+    id: editingEvent?.id ?? '',
+    nombre: editingEvent?.nombre ?? '',
+    descripcion: editingEvent?.descripcion ?? '',
+    cantidad: editingEvent ? String(editingEvent.cantidad) : '',
+    fecha: editingEvent?.fecha ?? new Date().toISOString().split('T')[0],
+    tipo: editingEvent?.tipo ?? 'ingreso',
+    adjunto: editingEvent?.adjunto ?? '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [imagePreview, setImagePreview] = useState<string>(editingEvent?.adjunto || '');
+  const [imagePreview, setImagePreview] = useState<string>(editingEvent?.adjunto ?? '');
 
   useEffect(() => {
     if (editingEvent) {
       setFormData({
         id: editingEvent.id,
         nombre: editingEvent.nombre,
-        descripcion: editingEvent.descripcion || '',
-        cantidad: editingEvent.cantidad,
+        descripcion: editingEvent.descripcion ?? '',
+        cantidad: String(editingEvent.cantidad),
         fecha: editingEvent.fecha,
         tipo: editingEvent.tipo,
-        adjunto: editingEvent.adjunto || '',
+        adjunto: editingEvent.adjunto ?? '',
       });
-      setImagePreview(editingEvent.adjunto || '');
+      setImagePreview(editingEvent.adjunto ?? '');
     }
   }, [editingEvent]);
 
-  const handleInputChange = (field: keyof EventFormData) => (
+  const handleInputChange = (field: keyof EventFormState) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    const value = field === 'cantidad' ? parseFloat(e.target.value) || 0 : e.target.value;
+    let value: string = e.target.value;
+    
+    if (field === 'cantidad') {
+      if (value === '' || (!isNaN(Number(value)) && Number(value) >= 0)) {
+        setFormData(prev => ({ ...prev, [field]: value }));
+      }
+      return;
+    }
+    
     setFormData(prev => ({ ...prev, [field]: value }));
     
     if (errors[field]) {
@@ -92,13 +111,13 @@ export const EventForm: React.FC<EventFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+    const dataToValidate = {
+      ...formData,
+      cantidad: parseFloat(formData.cantidad),
+      id: editingEvent ? formData.id : crypto.randomUUID(),
+    };
+
     try {
-      // Generate ID for new events
-      const dataToValidate = editingEvent 
-        ? formData 
-        : { ...formData, id: crypto.randomUUID() };
-      
       const validatedData = eventSchema.parse(dataToValidate);
       
       if (editingEvent) {
@@ -117,7 +136,7 @@ export const EventForm: React.FC<EventFormProps> = ({
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
+        error.issues.forEach((err) => {
           if (err.path[0]) {
             newErrors[err.path[0] as string] = err.message;
           }
