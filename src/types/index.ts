@@ -3,11 +3,11 @@ export type EventType = 'ingreso' | 'egreso';
 export interface WalletEvent {
   id: string;
   nombre: string;
-  descripcion?: string;
+  descripcion: string;
   cantidad: number;
   fecha: string;
   tipo: EventType;
-  adjunto?: string;
+  adjunto: string;
 }
 
 export interface MonthlyGroup {

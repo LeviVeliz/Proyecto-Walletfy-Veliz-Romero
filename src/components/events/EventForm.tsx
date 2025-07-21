@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch } from '../../hooks';
 import { addEvent, updateEvent, saveEvents } from '../../store/slices/eventsSlice';
-import { eventSchema, EventFormData } from '../../schemas/eventSchema';
+import { eventSchema } from '../../schemas/eventSchema';
 import { WalletEvent, EventType } from '../../types';
 import { Input } from '../ui/Input';
 import { TextArea } from '../ui/TextArea';
@@ -11,6 +11,17 @@ import { Card } from '../ui/Card';
 import { Container } from '../ui/Container';
 import { Save, ArrowLeft, Upload, X } from 'lucide-react';
 import { z } from 'zod';
+
+
+interface EventFormState {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  cantidad: string; 
+  fecha: string;
+  tipo: EventType;
+  adjunto: string;
+}
 
 interface EventFormProps {
   editingEvent?: WalletEvent | undefined;
@@ -25,11 +36,11 @@ export const EventForm: React.FC<EventFormProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   
-  const [formData, setFormData] = useState<EventFormData>({
+  const [formData, setFormData] = useState<EventFormState>({
     id: editingEvent?.id ?? '',
     nombre: editingEvent?.nombre ?? '',
     descripcion: editingEvent?.descripcion ?? '',
-    cantidad: editingEvent?.cantidad ?? 0,
+    cantidad: editingEvent ? String(editingEvent.cantidad) : '',
     fecha: editingEvent?.fecha ?? new Date().toISOString().split('T')[0],
     tipo: editingEvent?.tipo ?? 'ingreso',
     adjunto: editingEvent?.adjunto ?? '',
@@ -44,7 +55,7 @@ export const EventForm: React.FC<EventFormProps> = ({
         id: editingEvent.id,
         nombre: editingEvent.nombre,
         descripcion: editingEvent.descripcion ?? '',
-        cantidad: editingEvent.cantidad,
+        cantidad: String(editingEvent.cantidad),
         fecha: editingEvent.fecha,
         tipo: editingEvent.tipo,
         adjunto: editingEvent.adjunto ?? '',
@@ -53,19 +64,16 @@ export const EventForm: React.FC<EventFormProps> = ({
     }
   }, [editingEvent]);
 
-  const handleInputChange = (field: keyof EventFormData) => (
+  const handleInputChange = (field: keyof EventFormState) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    let value: string | number = e.target.value;
+    let value: string = e.target.value;
     
     if (field === 'cantidad') {
-      if (value === '') {
-        value = 0;
-      } else if (!isNaN(Number(value))) {
-        value = Number(value);
-      } else {
-        return;
+      if (value === '' || (!isNaN(Number(value)) && Number(value) >= 0)) {
+        setFormData(prev => ({ ...prev, [field]: value }));
       }
+      return;
     }
     
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -103,12 +111,13 @@ export const EventForm: React.FC<EventFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+    const dataToValidate = {
+      ...formData,
+      cantidad: parseFloat(formData.cantidad),
+      id: editingEvent ? formData.id : crypto.randomUUID(),
+    };
+
     try {
-      const dataToValidate = editingEvent 
-        ? formData 
-        : { ...formData, id: crypto.randomUUID() };
-      
       const validatedData = eventSchema.parse(dataToValidate);
       
       if (editingEvent) {
@@ -194,7 +203,7 @@ export const EventForm: React.FC<EventFormProps> = ({
                   value={formData.cantidad}
                   onChange={handleInputChange('cantidad')}
                   error={errors.cantidad}
-                  placeholder="Ingrese la cantidad"
+                  placeholder="0.00"
                   required
                 />
 
