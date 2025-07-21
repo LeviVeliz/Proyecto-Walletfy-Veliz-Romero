@@ -6,12 +6,17 @@ export const eventSchema = z.object({
     .min(1, 'Nombre es requerido')
     .max(20, 'Nombre debe tener máximo 20 caracteres'),
   descripcion: z.string()
-    .max(100, 'Descripción debe tener máximo 100 caracteres')
-    .optional()
-    .or(z.literal('')),
+    .max(100, 'Descripción debe tener máximo 100 caracteres'),
   cantidad: z.number()
     .positive('La cantidad debe ser un número positivo')
-    .refine((val) => val > 0, 'La cantidad debe ser mayor a 0'),
+    .refine((val) => val > 0, 'La cantidad debe ser mayor a 0')
+      .or(z.string().transform((val) => {
+        const num = parseFloat(val);
+        if (isNaN(num) || num <= 0) {
+          throw new Error('La cantidad debe ser un número positivo mayor a 0');
+        }
+        return num;
+      })),
   fecha: z.string()
     .min(1, 'Fecha es requerida')
     .refine((date) => {
@@ -21,7 +26,7 @@ export const eventSchema = z.object({
     required_error: 'Tipo es requerido',
     invalid_type_error: 'Tipo debe ser ingreso o egreso'
   }),
-  adjunto: z.string().optional()
+  adjunto: z.string()
 });
 
 export type EventFormData = z.infer<typeof eventSchema>;

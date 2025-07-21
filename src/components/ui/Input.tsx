@@ -3,6 +3,8 @@ import React from 'react';
 interface InputProps {
   label?: string;
   type?: string;
+  step?: string;
+  min?: string;
   value: string | number;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   error?: string;
@@ -15,6 +17,8 @@ interface InputProps {
 export const Input: React.FC<InputProps> = ({
   label,
   type = 'text',
+  step,
+  min,
   value,
   onChange,
   error,
@@ -33,6 +37,8 @@ export const Input: React.FC<InputProps> = ({
       )}
       <input
         type={type}
+        step={step}
+        min={min}
         value={value}
         onChange={onChange}
         placeholder={placeholder}

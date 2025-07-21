@@ -13,7 +13,7 @@ import { Save, ArrowLeft, Upload, X } from 'lucide-react';
 import { z } from 'zod';
 
 interface EventFormProps {
-  editingEvent?: WalletEvent;
+  editingEvent?: WalletEvent | undefined;
   onCancel: () => void;
   events: WalletEvent[];
 }
@@ -26,37 +26,48 @@ export const EventForm: React.FC<EventFormProps> = ({
   const dispatch = useAppDispatch();
   
   const [formData, setFormData] = useState<EventFormData>({
-    id: editingEvent?.id || '',
-    nombre: editingEvent?.nombre || '',
-    descripcion: editingEvent?.descripcion || '',
-    cantidad: editingEvent?.cantidad || 0,
-    fecha: editingEvent?.fecha || new Date().toISOString().split('T')[0],
-    tipo: editingEvent?.tipo || 'ingreso',
-    adjunto: editingEvent?.adjunto || '',
+    id: editingEvent?.id ?? '',
+    nombre: editingEvent?.nombre ?? '',
+    descripcion: editingEvent?.descripcion ?? '',
+    cantidad: editingEvent?.cantidad ?? 0,
+    fecha: editingEvent?.fecha ?? new Date().toISOString().split('T')[0],
+    tipo: editingEvent?.tipo ?? 'ingreso',
+    adjunto: editingEvent?.adjunto ?? '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [imagePreview, setImagePreview] = useState<string>(editingEvent?.adjunto || '');
+  const [imagePreview, setImagePreview] = useState<string>(editingEvent?.adjunto ?? '');
 
   useEffect(() => {
     if (editingEvent) {
       setFormData({
         id: editingEvent.id,
         nombre: editingEvent.nombre,
-        descripcion: editingEvent.descripcion || '',
+        descripcion: editingEvent.descripcion ?? '',
         cantidad: editingEvent.cantidad,
         fecha: editingEvent.fecha,
         tipo: editingEvent.tipo,
-        adjunto: editingEvent.adjunto || '',
+        adjunto: editingEvent.adjunto ?? '',
       });
-      setImagePreview(editingEvent.adjunto || '');
+      setImagePreview(editingEvent.adjunto ?? '');
     }
   }, [editingEvent]);
 
   const handleInputChange = (field: keyof EventFormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    const value = field === 'cantidad' ? parseFloat(e.target.value) || 0 : e.target.value;
+    let value: string | number = e.target.value;
+    
+    if (field === 'cantidad') {
+      if (value === '') {
+        value = 0;
+      } else if (!isNaN(Number(value))) {
+        value = Number(value);
+      } else {
+        return;
+      }
+    }
+    
     setFormData(prev => ({ ...prev, [field]: value }));
     
     if (errors[field]) {
@@ -94,7 +105,6 @@ export const EventForm: React.FC<EventFormProps> = ({
     e.preventDefault();
     
     try {
-      // Generate ID for new events
       const dataToValidate = editingEvent 
         ? formData 
         : { ...formData, id: crypto.randomUUID() };
@@ -117,7 +127,7 @@ export const EventForm: React.FC<EventFormProps> = ({
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
+        error.issues.forEach((err) => {
           if (err.path[0]) {
             newErrors[err.path[0] as string] = err.message;
           }
@@ -184,7 +194,7 @@ export const EventForm: React.FC<EventFormProps> = ({
                   value={formData.cantidad}
                   onChange={handleInputChange('cantidad')}
                   error={errors.cantidad}
-                  placeholder="0.00"
+                  placeholder="Ingrese la cantidad"
                   required
                 />
 
